@@ -1,0 +1,56 @@
+{
+  "name": "sfere-magiche",
+  "productName": "Sfere Magiche",
+  "version": "1.0.0",
+  "description": "Gioco match-3 a righe scorrevoli con sfere sorridenti",
+  "main": "main.js",
+  "author": {
+    "name": "Sfere Magiche",
+    "email": "sfere@example.com"
+  },
+  "homepage": "https://example.com",
+  "license": "MIT",
+  "scripts": {
+    "start": "electron .",
+    "dist:win": "electron-builder --win --publish never",
+    "dist:linux": "electron-builder --linux --publish never"
+  },
+  "devDependencies": {
+    "electron": "^33.2.0",
+    "electron-builder": "^25.1.8"
+  },
+  "build": {
+    "appId": "it.sferemagiche.app",
+    "productName": "Sfere Magiche",
+    "files": [
+      "main.js",
+      "index.html",
+      "build/icon.png"
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": [
+        "nsis",
+        "portable"
+      ],
+      "icon": "build/icon.png"
+    },
+    "nsis": {
+      "oneClick": false,
+      "allowToChangeInstallationDirectory": true,
+      "createDesktopShortcut": true
+    },
+    "linux": {
+      "target": [
+        "AppImage",
+        "rpm",
+        "deb"
+      ],
+      "category": "Game",
+      "icon": "build/icon.png",
+      "maintainer": "Sfere Magiche <sfere@example.com>"
+    }
+  }
+}
