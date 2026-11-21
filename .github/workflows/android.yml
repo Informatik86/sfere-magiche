@@ -1,0 +1,33 @@
+name: Android APK
+on:
+  push:
+  workflow_dispatch:
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Prepara progetto Android
+        working-directory: android-app
+        run: |
+          mkdir -p www
+          cp ../index.html www/index.html
+          npm install
+          npx cap add android
+          npx cap sync android
+      - name: Compila APK
+        working-directory: android-app/android
+        run: |
+          chmod +x gradlew
+          ./gradlew assembleDebug
+      - uses: actions/upload-artifact@v4
+        with:
+          name: sfere-magiche-android
+          path: android-app/android/app/build/outputs/apk/debug/*.apk
