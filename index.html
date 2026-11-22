@@ -76,6 +76,20 @@ let users={},cur=null,g=[],score=0,startBest=0,busy=false,over=false,drag=null,p
 let parts=[],pops=[];
 function load(){try{users=JSON.parse(localStorage.getItem("sfere_users")||"{}")||{}}catch(e){users={}}}
 function save(){try{localStorage.setItem("sfere_users",JSON.stringify(users))}catch(e){}}
+let saves={};
+function loadSaves(){try{saves=JSON.parse(localStorage.getItem("sfere_saves")||"{}")||{}}catch(e){saves={}}}
+function writeSaves(){try{localStorage.setItem("sfere_saves",JSON.stringify(saves))}catch(e){}}
+function saveGame(){if(!cur||over||!g.length)return;saves[cur]={k:kOf(),score,startBest};writeSaves()}
+function clearSave(){if(cur&&saves[cur]){delete saves[cur];writeSaves()}}
+function validSave(s){return !!s&&Array.isArray(s.k)&&s.k.length===N&&s.k.every(r=>Array.isArray(r)&&r.length===N&&r.every(v=>Number.isInteger(v)&&v>=0&&v<6))&&Number.isFinite(s.score)}
+async function resume(){
+  const s=saves[cur];
+  if(!validSave(s)||matches(s.k)||!findMoves(s.k).length){clearSave();return newGame()}
+  over=false;$("over").hidden=true;hint=null;drag=null;ptr=null;parts=[];pops=[];banner=null;busy=false;
+  score=s.score;startBest=Number.isFinite(s.startBest)?s.startBest:(users[cur]||0);
+  g=s.k.map(row=>row.map(v=>mk(v)));
+  updateScore();
+}
 
 /* ---------- Sonoro ---------- */
 let snd=true;try{snd=localStorage.getItem("sfere_snd")!=="0"}catch(e){}
@@ -110,13 +124,13 @@ function renderMenu(){
   if(!names.length){const p=document.createElement("p");p.className="empty";p.textContent="Nessun giocatore ancora. Creane uno per iniziare!";l.appendChild(p)}
   names.forEach((n,i)=>{
     const b=document.createElement("button");b.className="urow";
-    const a=document.createElement("span");a.textContent=(i===0&&users[n]>0?"👑 ":"🎮 ")+n;
+    const a=document.createElement("span");a.textContent=(i===0&&users[n]>0?"👑 ":"🎮 ")+n+(validSave(saves[n])?" · in corso":"");
     const r=document.createElement("b");r.textContent="Record: "+Number(users[n]).toLocaleString("it-IT");
     const w=document.createElement("div");w.className="urw";b.append(a,r);b.onclick=()=>start(n);
     const x=document.createElement("button");x.className="udel";x.textContent="🗑";x.title="Elimina utente";x.setAttribute("aria-label","Elimina "+n);
     let tm=null;
     x.onclick=()=>{
-      if(x.dataset.arm){clearTimeout(tm);delete users[n];save();renderMenu();return}
+      if(x.dataset.arm){clearTimeout(tm);delete users[n];save();delete saves[n];writeSaves();renderMenu();return}
       x.dataset.arm="1";x.textContent="Elimina?";x.classList.add("arm");
       tm=setTimeout(()=>{delete x.dataset.arm;x.textContent="🗑";x.classList.remove("arm")},3000);
     };
@@ -167,7 +181,7 @@ async function newGame(){
   do{k=[];for(let r=0;r<N;r++){k[r]=[];for(let c=0;c<N;c++){let v;do{v=Math.floor(Math.random()*6)}while((c>=2&&k[r][c-1]===v&&k[r][c-2]===v)||(r>=2&&k[r-1][c]===v&&k[r-2][c]===v));k[r][c]=v}}}while(matches(k)||!findMoves(k).length);
   g=k.map((row,r)=>row.map(v=>{const b=mk(v);b.dy=-(r+N+1)-Math.random()*2;b.d0=b.dy;return b}));
   await anim(900,t=>{const e=ease(t);g.forEach(row=>row.forEach(b=>b.dy=b.d0*(1-e)))});
-  busy=false;
+  busy=false;saveGame();
 }
 function updateScore(){
   if(score>(users[cur]||0)){users[cur]=score;save()}
@@ -215,12 +229,12 @@ async function finish(){
     else{const col=g.map(r=>r[d.idx]);for(let r=0;r<N;r++)g[(r+sm)%N][d.idx]=col[r]}
     drag=null;
     await resolve();
-    if(!findMoves(kOf()).length)endGame();
+    if(!findMoves(kOf()).length)endGame();else saveGame();
   }else{drag=null;SND.bad()}
   busy=false;
 }
 async function endGame(){
-  over=true;await wait(500);
+  over=true;clearSave();await wait(500);
   const rec=score>startBest&&score>0;if(rec)SND.record();else SND.over();
   $("ot").textContent="Nessuna mossa valida!";
   $("os").textContent="Punteggio: "+score.toLocaleString("it-IT");
@@ -342,10 +356,10 @@ function loop(now){
 }
 function start(n){
   cur=n;$("pn").textContent=n;$("menu").hidden=true;$("game").hidden=false;
-  resize();newGame();
+  resize();resume();
 }
 if(/Electron/i.test(navigator.userAgent)){const q=$("quit");q.hidden=false;q.onclick=()=>window.close()}
-load();renderMenu();requestAnimationFrame(loop);
+load();loadSaves();renderMenu();requestAnimationFrame(loop);
 </script>
 </body>
 </html>
